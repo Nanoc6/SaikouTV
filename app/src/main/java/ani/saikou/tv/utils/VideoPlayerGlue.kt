@@ -1,5 +1,6 @@
 package ani.saikou.tv.utils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.view.KeyEvent
 import androidx.leanback.media.PlaybackTransportControlGlue
@@ -12,6 +13,7 @@ import ani.saikou.R
 import com.google.android.exoplayer2.ext.leanback.LeanbackPlayerAdapter
 import java.util.concurrent.*
 
+@SuppressLint("UseCompatLoadingForDrawables")
 class ResizeAction(context: Context?): Action(1234567891) {
     init {
         icon = context?.getDrawable(R.drawable.ic_round_fullscreen_24)
@@ -22,6 +24,13 @@ class QualityAction(context: Context?): Action(1234567892) {
     init {
         icon = context?.getDrawable(R.drawable.ic_round_high_quality_24)
         label1 = "Quality"
+    }
+}
+
+class Skip85Action(context: Context?): Action(1234567893) {
+    init {
+        icon = context?.getDrawable(R.drawable.ic_skip85)
+        label1 = "+85s Skip"
     }
 }
 
@@ -56,6 +65,7 @@ class VideoPlayerGlue(
     private val mSkipPreviousAction: SkipPreviousAction
     private val mSkipNextAction: SkipNextAction
     private val mFastForwardAction: FastForwardAction
+    private val mSkip85Action: Skip85Action
     private val mRewindAction: RewindAction
     override fun onCreatePrimaryActions(adapter: ArrayObjectAdapter) {
         // Order matters, super.onCreatePrimaryActions() will create the play / pause action.
@@ -66,6 +76,7 @@ class VideoPlayerGlue(
         adapter.add(mSkipPreviousAction)
         adapter.add(mRewindAction)
         adapter.add(mFastForwardAction)
+        adapter.add(mSkip85Action)
         adapter.add(mSkipNextAction)
     }
 
@@ -106,7 +117,7 @@ class VideoPlayerGlue(
 
     // Should dispatch actions that the super class does not supply callbacks for.
     private fun shouldDispatchAction(action: Action): Boolean {
-        return action === mRewindAction || action === mFastForwardAction || action === resizeAction || action === qualityAction
+        return action === mRewindAction || action === mFastForwardAction || action === mSkip85Action || action === resizeAction || action === qualityAction
     }
 
     private fun dispatchAction(action: Action) {
@@ -115,6 +126,8 @@ class VideoPlayerGlue(
             rewind()
         } else if (action === mFastForwardAction) {
             fastForward()
+        } else if (action === mSkip85Action) {
+            skip85()
         } else if (action === resizeAction) {
             mActionListener.onResize()
         } else if (action === qualityAction) {
@@ -165,15 +178,25 @@ class VideoPlayerGlue(
             playerAdapter!!.seekTo(newPosition)
         }
     }
+    /** Skips forward 85 seconds.  */
+    fun skip85() {
+        if (duration > -1) {
+            var newPosition = currentPosition + SKIP_85
+            newPosition = if (newPosition > duration) duration else newPosition
+            playerAdapter!!.seekTo(newPosition)
+        }
+    }
 
     companion object {
         private val TEN_SECONDS = TimeUnit.SECONDS.toMillis(10)
+        private val SKIP_85 = TimeUnit.SECONDS.toMillis(85)
     }
 
     init {
         mSkipPreviousAction = SkipPreviousAction(context)
         mSkipNextAction = SkipNextAction(context)
         mFastForwardAction = FastForwardAction(context)
+        mSkip85Action = Skip85Action(context)
         mRewindAction = RewindAction(context)
         resizeAction = ResizeAction(context)
         qualityAction = QualityAction(context)
